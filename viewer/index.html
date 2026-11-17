@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f5fa">
+  <title>π⁴: A Foundation Model for 4D Scene Geometry and Motion</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><strong>π<sup>4</sup><span class="brand-dot">.</span></strong><span class="brand-divider"></span><span class="brand-caption">GEOMETRY IN MOTION</span></div>
+    <div class="session-meta"><span class="session-dot"></span><span id="scene-meta">Preparing scene</span><span class="session-label">LIVE RECONSTRUCTION</span></div>
+  </header>
+  <main id="viewer-shell">
+    <section id="viewport" aria-label="Interactive 3D reconstruction">
+      <div class="scene-heading"><span class="eyebrow">EXPLORE THE FOURTH DIMENSION</span><h1>One scene. Every perspective.</h1><p id="source-name">RGB sequence</p></div>
+      <div class="scene-actions">
+        <span class="camera-mode"><span class="mode-dot"></span><span class="mode-follow">Following camera</span><span class="mode-free">Free orbit</span></span>
+        <div class="view-toolbar">
+          <button id="fit" title="Fit visible points (F)" aria-label="Fit visible points"><svg viewBox="0 0 20 20" fill="none"><path d="M7 3H3v4m10-4h4v4M3 13v4h4m10-4v4h-4"/></svg></button>
+          <button id="reset" title="Reset view (R)" aria-label="Reset view"><svg viewBox="0 0 20 20" fill="none"><path d="M4 7a6.5 6.5 0 1 1-.5 5M4 3v4h4"/></svg></button>
+          <button id="fullscreen" title="Toggle fullscreen" aria-label="Toggle fullscreen"><svg viewBox="0 0 20 20" fill="none"><path d="M7 2H2v5m11-5h5v5M2 13v5h5m11-5v5h-5"/></svg></button>
+        </div>
+      </div>
+      <button id="enter-camera" class="preview-wrap" title="Enter the current input camera" disabled>
+        <span class="preview-heading"><span class="session-dot"></span>INPUT RGB <span>ENTER CAMERA ↗</span></span>
+        <img id="preview" alt="Input RGB frame"><span id="source-time" class="preview-time">00:00.00</span>
+      </button>
+      <p id="loading" class="loading-badge" role="status">Preparing scene…</p>
+      <div class="scene-readouts"><div><span class="readout-label">VISIBLE POINTS</span><strong id="visible-points">—</strong></div><div><span class="readout-label">FRAMES LOADED</span><strong id="loaded-frames">—</strong><span class="load-meter"><span id="load-progress"></span></span></div></div>
+      <div class="playback-dock">
+        <button id="play" class="primary" aria-pressed="false" aria-label="Start playback" title="Start playback" disabled><svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 11 7-11 7Z"/></svg><svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button>
+        <div class="timeline"><div class="timeline-heading"><label for="frame">CAMERA STREAM</label><span id="time-value">00:00.00 / —</span></div><div class="filmstrip-track"><canvas id="filmstrip" aria-hidden="true"></canvas><input id="frame" aria-label="Playback frame" type="range" min="0" max="0" value="0" step="1" disabled></div></div>
+        <select id="speed" aria-label="Playback speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
+        <output id="frame-value" for="frame">— / —</output>
+      </div>
+      <footer class="viewport-footer"><span>Drag to orbit <i>·</i> Shift + drag to pan <i>·</i> Scroll to zoom <i>·</i> Double-click to focus</span><span id="render-stats">WebGL2</span></footer>
+      <p id="status" class="sr-only"></p><div id="toast" role="status" hidden></div>
+    </section>
+    <aside aria-label="Scene controls">
+      <div class="inspector-heading"><span class="eyebrow">MAKE IT YOUR PERSPECTIVE</span><h2>Scene studio<span>↗</span></h2><p>Real predictions. Your point of view.</p></div>
+      <section class="panel-section">
+        <div class="section-heading"><h3>Render budget</h3><span class="section-tag">LINSPACE</span></div>
+        <div class="budget-readout"><strong id="point-budget-value">2.00M</strong><span>point limit</span></div>
+        <input id="point-budget" aria-label="Maximum rendered points" type="range" min="50000" max="2000000" value="2000000" step="1" disabled>
+        <div class="range-endpoints"><span id="point-budget-min">50K</span><span id="point-budget-max">2M</span></div>
+        <p id="point-budget-note" class="hint">Evenly sampled across loaded geometry. Lower the limit for a smoother view; predictions and downloads stay unchanged.</p>
+      </section>
+      <section class="panel-section">
+        <div class="section-heading"><h3>Scene layers</h3><span class="section-tag">LIVE</span></div>
+        <label class="check"><span>Follow camera</span><input id="follow-camera" type="checkbox" disabled></label>
+        <label class="check"><span>Camera views</span><input id="show-cameras" type="checkbox" checked></label>
+        <label class="check"><span>Progressive build</span><input id="reveal" type="checkbox" checked></label>
+        <label class="check"><span>Highlight current frame</span><input id="highlight" type="checkbox" checked></label>
+        <label class="check"><span>Point trajectories</span><input id="show-tracks" type="checkbox" checked></label>
+        <div class="range-field"><label class="field-title" for="point-size">Point size <output id="size-value"></output></label><input id="point-size" type="range" min="0.5" max="12" step="0.1" value="2"></div>
+        <div class="range-field"><label class="field-title" for="opacity">Opacity <output id="opacity-value"></output></label><input id="opacity" type="range" min="0" max="1" step="0.01" value="1"></div>
+      </section>
+      <details class="panel-section advanced-panel"><summary>Geometry filters<span>+</span></summary><div class="advanced-content">
+        <label class="field-title" for="motion-scope">Motion visibility</label><select id="motion-scope"><option value="current" selected>Current motion + background</option><option value="current-only">Current motion only</option><option value="all">All frames, including motion</option><option value="hidden">Static background only</option></select>
+        <div class="range-field"><label class="field-title" for="confidence">Geometry confidence <output id="confidence-value">0.05</output></label><input id="confidence" type="range" min="0" max="1" step="0.01" value="0.05" disabled></div>
+        <p id="motion-note" class="hint">Uses each frame's native motion mask (≥ 0.5). Track filtering stays independent.</p><p id="confidence-note" class="hint">Depth-normal edges have zero display confidence. Set the threshold to 0 to include them.</p>
+        <p id="follow-note" class="hint">Smoothly follows the predicted camera. Click or drag the filmstrip, or click the RGB inset to re-enter it. Dragging or zooming the scene returns to free view.</p><p id="preview-note" class="hint" hidden></p>
+      </div></details>
+      <details class="panel-section advanced-panel"><summary>Trajectory filters<span>+</span></summary><div class="advanced-content">
+        <div class="range-field"><label class="field-title" for="track-count">Track count <output id="track-count-value">—</output></label><input id="track-count" type="range" min="0" max="1024" step="1" value="256" disabled></div>
+        <div class="range-field"><label class="field-title" for="track-tail">Trail duration <output id="track-tail-value">0.80 s</output></label><input id="track-tail" type="range" min="0.05" max="10" step="0.05" value="0.8" disabled></div>
+        <div class="range-field"><label class="field-title" for="track-confidence">Track confidence <output id="track-confidence-value">0.50</output></label><input id="track-confidence" type="range" min="0" max="1" step="0.01" value="0.5" disabled></div>
+        <label class="check"><span>Full trajectories</span><input id="full-trails" type="checkbox" disabled></label>
+        <p id="track-status" class="track-status" role="status"></p><p id="track-empty" class="hint" hidden></p>
+        <p id="track-confidence-note" class="hint">Tracking accuracy, independent of geometry confidence. Both segment endpoints must pass.</p><p id="track-note" class="hint">Fixed query sampling. Missing observations break trails. Full trajectories include future frames.</p>
+      </div></details>
+      <div class="inspector-footer"><span class="session-dot"></span>DISPLAY ONLY · PREDICTIONS UNCHANGED</div>
+    </aside>
+  </main>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

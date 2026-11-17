@@ -1,0 +1,49 @@
+Pi4 licensing
+
+Original Pi4 source code is licensed under CC BY-NC 4.0 (LICENSE).
+Pi4 model weights are licensed under CC BY-NC 4.0 (LICENSE_MODEL), including
+checkpoints distributed separately from this repository.
+
+Third-party materials retain their upstream licenses. Neither Pi4 license
+overrides those terms or grants rights to third-party materials. In particular,
+CoWTracker-derived materials remain subject to the FAIR Noncommercial Research
+License, which is not replaced by CC BY-NC 4.0.
+Separate checkpoint distributions should include LICENSE_MODEL and applicable
+third-party notices.
+
+Pi4 uses or adapts the following upstream implementations and architectures:
+
+The bundled viewer is a reduced migration of the project's point_cloud_viewer:
+quaternion trackball controls, page layout/styles, point shaders and sorting,
+screen-space picking, binary-array decoding, motion geometry scopes, progressive
+frame display, current-frame highlights, and seeded dynamic-track selection.
+It runs independently and does not import that project at runtime.
+
+DINOv3: facebookresearch/dinov3; image encoder and axial rotary encoding.
+License text: licenses/DINOV3.txt.
+
+MoGe: microsoft/MoGe; point decoding and sparse depth-refinement architecture.
+License text: licenses/MOGE.txt.
+
+CoWTracker: facebookresearch/cowtracker; RGB features, dense iterative warping,
+cross-view refinement, and confidence/visibility outputs.
+License text: licenses/COWTRACKER.txt.
+
+SAM 2: facebookresearch/sam2; Hiera-small and feature-pyramid image encoding.
+License text: licenses/SAM2.txt.
+
+Depth Anything V2: DepthAnything/Depth-Anything-V2; DPT feature-fusion blocks.
+License text: licenses/DEPTH_ANYTHING_V2.txt.
+
+PyTorch Image Models: huggingface/pytorch-image-models; tracking ViT architecture.
+Apache-2.0 text: licenses/APACHE-2.0.txt.
+
+Pi3: yyfz/Pi3; geometry-decoder and camera-readout architecture.
+License text: licenses/PI3.txt.
+
+FlexGEMM: JeffreyXiang/FlexGEMM; separately installed sparse-convolution backend.
+Its own distribution retains its license and notices.
+
+Three.js: mrdoob/three.js; bundled browser rendering and TrackballControls.
+License text: licenses/THREE.txt. Only these runtime files are retained from
+the larger point-cloud viewer; no server-rendering or recording code is used.

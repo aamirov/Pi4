@@ -1,0 +1,9 @@
+--find-links https://download.pytorch.org/whl/cu126/torch/
+torch==2.12.1+cu126
+triton==3.7.1
+safetensors==0.8.0
+huggingface-hub==2.4.0
+numpy==2.4.6
+Pillow==13.0.0
+opencv-python-headless==5.0.0.93
+-e .[example]

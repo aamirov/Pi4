@@ -1,0 +1,10 @@
+gradio==6.31.0
+spaces==0.51.3
+torch==2.12.1
+safetensors>=0.4
+huggingface-hub>=0.27
+triton==3.7.1; sys_platform == 'linux'
+flex_gemm @ git+https://github.com/JeffreyXiang/FlexGEMM.git@b2fadb29d41846c7981ade6801ffc689fae119cf
+numpy
+Pillow
+opencv-python-headless
