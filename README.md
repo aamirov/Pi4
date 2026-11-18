@@ -7,7 +7,7 @@
 <p>
   <a href="https://yyfz.github.io/pi4"><img src="docs/assets/project-page-badge.svg" alt="Project Page" height="36"></a>
   &nbsp;
-  <img src="docs/assets/paper-badge.svg" alt="Paper" height="36">
+  <a href="https://arxiv.org/abs/2611.23144"><img src="docs/assets/paper-badge.svg" alt="Paper" height="36"></a>
   &nbsp;
   <a href="https://weiguangzhao.github.io/GameRealm/"><img src="docs/assets/dataset-badge.svg" alt="GameRealm Dataset" height="36"></a>
   &nbsp;
@@ -204,10 +204,10 @@ If you use Pi4 in your research, please cite:
   title         = {{$\pi^4$}: A Foundation Model for {4D} Scene Geometry and Motion},
   author        = {Wang, Yifan and Zhao, Weiguang and Yang, Ni and Guo, Haoyu and Dong, Junting and Zhang, Weinan and Shen, Chunhua},
   year          = {2026},
-  eprint        = {},
+  eprint        = {2611.23144},
   archivePrefix = {arXiv},
   primaryClass  = {cs.CV},
-  url           = {}
+  url           = {https://arxiv.org/abs/2611.23144}
 }
 ```
 
