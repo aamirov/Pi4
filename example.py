@@ -24,6 +24,11 @@ def main():
     )
     parser.add_argument("--max-size", type=int, default=512)
     parser.add_argument(
+        "--no-refinement",
+        action="store_true",
+        help="use the point head's coarse depth and skip sparse depth refinement",
+    )
+    parser.add_argument(
         "--viewer",
         action="store_true",
         help="export browser-viewer data with a 40 MB point-cloud budget",
@@ -58,7 +63,9 @@ def main():
         .cuda()
     )
     model = Pi4.from_pretrained(arguments.weights).cuda()
-    prediction = model(images, query_frame=arguments.query_frame)
+    prediction = model(
+        images, query_frame=arguments.query_frame, refine=not arguments.no_refinement
+    )
     scene = save_visualization(
         arguments.output, frames, prediction, metadata, viewer=arguments.viewer
     )

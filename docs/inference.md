@@ -10,7 +10,7 @@ This repository contains one fixed inference model, not a configurable training 
 
 ## Install
 
-CUDA is required for sparse geometry refinement. The recommended setup is Linux
+CUDA is required for inference. The recommended setup is Linux
 x86-64, Python 3.11, an NVIDIA GPU with BF16 support, and a CUDA 12.6-compatible
 NVIDIA driver. Install Pi4 inside an isolated environment rather than your
 system Python or an unrelated project's environment. Git is required to install
@@ -88,6 +88,10 @@ Use your own RGB images in `[0, 1]`, shaped `[B, T, 3, H, W]`. Height and width
 must be positive multiples of 16. Normalization and precision handling are
 internal. Tracking requires at least two images. A scalar query index applies to
 the whole batch; an integer tensor shaped `[B]` selects one query per sequence.
+Pi4 uses FP32 on NVIDIA GPUs without native BF16. Sparse depth refinement is
+enabled by default. On GPUs with compute capability below 7.0, such as the Tesla
+P4, use `model(images, refine=False)` or pass `--no-refinement` to `example.py`
+to use the point head's coarse depth.
 Images are jointly processed, not silently split into temporal windows.
 Independent spatial operators use small frame batches internally, while tracking
 features and recurrent state are staged in CPU RAM. Temporal attention still

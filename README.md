@@ -70,6 +70,10 @@ The CUDA runtime is supplied by the PyTorch dependencies; a separate toolkit
 installation is not needed. See the
 [installation notes](docs/inference.md#install) for checks and other CUDA builds.
 
+Pi4 uses FP32 on NVIDIA GPUs without native BF16. On a Tesla P4, pass
+`--no-refinement` to use coarse depth in the example, or call
+`model(images, refine=False)` from Python.
+
 **Weights:** the example automatically downloads and caches the checkpoint from
 [yyfz233/Pi4](https://huggingface.co/yyfz233/Pi4). If the automatic download is
 slow, [download model.safetensors manually](https://huggingface.co/yyfz233/Pi4/resolve/main/model.safetensors)

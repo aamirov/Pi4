@@ -48,16 +48,21 @@ class Pi4(nn.Module):
         return model.eval()
 
     @torch.inference_mode()
-    def forward(self, images, query_frame=None):
+    def forward(self, images, query_frame=None, *, refine=True):
         if images.ndim != 5 or images.shape[2] != 3 or not images.is_floating_point():
             raise ValueError("images must be floating-point RGB [B,T,3,H,W] in [0,1]")
         batch_size, frames, _, height, width = images.shape
         if min(batch_size, frames, height, width) < 1 or height % 16 or width % 16:
             raise ValueError("image dimensions must be positive multiples of 16")
         if images.device.type != "cuda":
+            raise ValueError("Pi4 inference requires CUDA")
+        cuda_major, _ = torch.cuda.get_device_capability(images.device)
+        if refine and cuda_major < 7:
             raise ValueError(
-                "Pi4 inference requires CUDA for sparse geometry refinement"
+                "Sparse depth refinement requires CUDA compute capability 7.0 or "
+                "higher. Use refine=False in Python or --no-refinement in the CLI."
             )
+        use_bf16 = cuda_major >= 8
         queries = None
         if query_frame is not None:
             if frames < 2:
@@ -83,7 +88,7 @@ class Pi4(nn.Module):
         positions = patch_positions(
             batch_size * frames, height // 16, width // 16, images.device
         )
-        with torch.autocast("cuda", dtype=torch.bfloat16):
+        with torch.autocast("cuda", dtype=torch.bfloat16, enabled=use_bf16):
             tokens = self.encoder(normalized.flatten(0, 1))
             geometry, initial = self.geometry_decoder(
                 tokens, positions, batch_size, frames
@@ -95,8 +100,13 @@ class Pi4(nn.Module):
                 rays, log_depth, confidence, feature = self.point_head(
                     frame_tokens, height, width
                 )
-                coarse_depth = log_depth.exp().clamp_min(1e-6).log()
-                points.append(self.depth_refiner(rays, coarse_depth, feature))
+                coarse_depth = log_depth.exp().clamp_min(1e-6)
+                if refine:
+                    frame_points = self.depth_refiner(rays, coarse_depth.log(), feature)
+                else:
+                    depth = coarse_depth[..., None]
+                    frame_points = torch.cat((rays * depth, depth), dim=-1)
+                points.append(frame_points)
                 confidences.append(confidence)
             local_points = torch.cat(points).reshape(
                 batch_size, frames, height, width, 3
@@ -119,7 +129,7 @@ class Pi4(nn.Module):
         )
         del confidence_logits
         if queries is not None:
-            with torch.autocast("cuda", dtype=torch.bfloat16):
+            with torch.autocast("cuda", dtype=torch.bfloat16, enabled=use_bf16):
                 motion = self.motion_decoder(
                     initial, geometry, positions, batch_size, frames
                 )[:, 5:]
