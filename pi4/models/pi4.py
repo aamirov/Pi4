@@ -57,11 +57,6 @@ class Pi4(nn.Module):
         if images.device.type != "cuda":
             raise ValueError("Pi4 inference requires CUDA")
         cuda_major, _ = torch.cuda.get_device_capability(images.device)
-        if refine and cuda_major < 7:
-            raise ValueError(
-                "Sparse depth refinement requires CUDA compute capability 7.0 or "
-                "higher. Use refine=False in Python or --no-refinement in the CLI."
-            )
         use_bf16 = cuda_major >= 8
         queries = None
         if query_frame is not None:

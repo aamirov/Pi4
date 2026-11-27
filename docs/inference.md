@@ -90,8 +90,9 @@ internal. Tracking requires at least two images. A scalar query index applies to
 the whole batch; an integer tensor shaped `[B]` selects one query per sequence.
 Pi4 uses FP32 on NVIDIA GPUs without native BF16. Sparse depth refinement is
 enabled by default. On GPUs with compute capability below 7.0, such as the Tesla
-P4, use `model(images, refine=False)` or pass `--no-refinement` to `example.py`
-to use the point head's coarse depth.
+P4, the refiner uses PyTorch operations with the same checkpoint weights.
+Use `model(images, refine=False)` or pass `--no-refinement` to `example.py`
+for faster inference using the point head's coarse depth.
 Images are jointly processed, not silently split into temporal windows.
 Independent spatial operators use small frame batches internally, while tracking
 features and recurrent state are staged in CPU RAM. Temporal attention still

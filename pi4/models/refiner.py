@@ -1,7 +1,43 @@
+from itertools import product
+
 import torch
 from torch import nn
 from torch.nn import functional as F
 from flex_gemm.nn import SparsePool3d, SparseUpsample3d, SubmanifoldConv3d
+
+
+def _use_torch_sparse(features):
+    return torch.cuda.get_device_capability(features.device)[0] < 7
+
+
+def _neighbor_pairs(coordinates, shape):
+    # Leave a gap between rows, columns and batches so an out-of-bounds
+    # neighbor cannot wrap around and match a voxel on the opposite edge.
+    batch, row, column, depth = coordinates.long().unbind(1)
+    row_span, column_span, depth_span = (size + 2 for size in shape[1:4])
+    keys = ((batch * row_span + row) * column_span + column) * depth_span + depth
+    sorted_keys, order = keys.sort()
+    pairs = []
+    for dr, dc, dz in product((-1, 0, 1), repeat=3):
+        target = keys + (dr * column_span + dc) * depth_span + dz
+        index = torch.searchsorted(sorted_keys, target).clamp_max(len(keys) - 1)
+        dst = (sorted_keys[index] == target).nonzero().flatten()
+        pairs.append((dst, order[index[dst]]))
+    return pairs
+
+
+class RefinerConv3d(SubmanifoldConv3d):
+    def forward(self, features, coordinates, shape, neighbor_cache=None):
+        if not _use_torch_sparse(features):
+            return super().forward(features, coordinates, shape, neighbor_cache)
+        if neighbor_cache is None:
+            neighbor_cache = _neighbor_pairs(coordinates, shape)
+        output = features.new_zeros((len(features), self.out_channels))
+        for weight, (dst, src) in zip(self.weight.flatten(1, 3).unbind(1), neighbor_cache):
+            output.index_add_(0, dst, F.linear(features[src], weight))
+        if self.bias is not None:
+            output += self.bias
+        return output, neighbor_cache
 
 
 class SparseResidual(nn.Module):
@@ -9,8 +45,8 @@ class SparseResidual(nn.Module):
         super().__init__()
         self.norm1 = nn.LayerNorm(channels, eps=1e-6)
         algorithm = "masked_implicit_gemm" if channels >= 128 else "implicit_gemm"
-        self.conv1 = SubmanifoldConv3d(channels, channels, 3, algorithm=algorithm)
-        self.conv2 = SubmanifoldConv3d(channels, channels, 3, algorithm=algorithm)
+        self.conv1 = RefinerConv3d(channels, channels, 3, algorithm=algorithm)
+        self.conv2 = RefinerConv3d(channels, channels, 3, algorithm=algorithm)
 
     def forward(self, features, coordinates, shape, cache=None):
         residual = F.silu(self.norm1(features).type_as(features))
@@ -31,9 +67,19 @@ class SparseDown(nn.Module):
         output_shape = torch.Size(
             (shape[0], *((dimension + 1) // 2 for dimension in shape[1:4]), shape[4])
         )
-        features, coordinates, shape, cache = self.pool(
-            features, coordinates, shape, output_shape=output_shape
-        )
+        if _use_torch_sparse(features):
+            parents = coordinates.clone()
+            parents[:, 1:] //= 2
+            coordinates, cache, counts = torch.unique(
+                parents, dim=0, return_inverse=True, return_counts=True
+            )
+            pooled = features.new_zeros((len(counts), features.shape[1]))
+            features = pooled.index_add_(0, cache, features) / counts[:, None]
+            shape = output_shape
+        else:
+            features, coordinates, shape, cache = self.pool(
+                features, coordinates, shape, output_shape=output_shape
+            )
         features = self.linear(features)
         return (
             features,
@@ -53,6 +99,9 @@ class SparseUp(nn.Module):
         self, features, coordinates, shape, target_coordinates, target_shape, cache
     ):
         features = self.linear(features)
+        if _use_torch_sparse(features):
+            shape = torch.Size((*target_shape[:-1], features.shape[-1]))
+            return features[cache], target_coordinates, shape
         shape = torch.Size((*shape[:-1], features.shape[-1]))
         features, coordinates, shape, _ = self.upsample(
             features,
@@ -60,7 +109,7 @@ class SparseUp(nn.Module):
             shape,
             output_coords=target_coordinates,
             output_shape=target_shape,
-            neighbor_cache=cache,
+            neighbor_cache=cache.T,
         )
         return features, coordinates, shape
 
@@ -126,7 +175,7 @@ class SparseUNet(nn.Module):
                 shape,
                 skip_coordinates,
                 skip_shape,
-                down_caches[level].T,
+                down_caches[level],
             )
             features, caches[level] = stage[0](
                 features + skip_features, coordinates, shape, caches[level]
